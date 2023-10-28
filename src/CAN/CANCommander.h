@@ -13,16 +13,16 @@ class CANCommander : public Commander
     CANDriver* can_driver = nullptr;  
     
   private:
-    void print(const float number) override;
-    void print(const int number) override;
-    void print(const char* message) override;
-    void print(const __FlashStringHelper *message) override;
-    void print(const char message) override;
-    void println(const float number) override;
-    void println(const int number) override;
-    void println(const char* message) override;
-    void println(const __FlashStringHelper *message) override;
-    void println(const char message) override;
+    void print(const float number);
+    void print(const int number);
+    void print(const char* message);
+    void print(const __FlashStringHelper *message);
+    void print(const char message);
+    void println(const float number);
+    void println(const int number);
+    void println(const char* message);
+    void println(const __FlashStringHelper *message);
+    void println(const char message);
 
 };
 

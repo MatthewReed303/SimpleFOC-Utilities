@@ -1,6 +1,8 @@
 #include "SimpleCAN.h"
 #include <Arduino.h>
-#include <SimpleCAN_c.h>
+#include "SimpleCAN_c.h"
+
+#if defined(STM32F4xx)
 
 can_callback_function_t SimpleCAN::receiveFunction;
 // void(*SimpleCAN::receiveCallback)(can_message_t* message);
@@ -151,4 +153,4 @@ extern "C" void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 
 }
 
-
+#endif

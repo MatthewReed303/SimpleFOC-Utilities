@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Arduino.h"
+
+#if defined(STM32F4xx)
 #include "stm32f4xx_hal_can.h"
 
 // Value needed for prescaler. depends 
@@ -92,4 +94,6 @@ public:
 private: 
 	void createCanHandle(CanSpeed speed, CanMode mode);
 };
+
+#endif
 
