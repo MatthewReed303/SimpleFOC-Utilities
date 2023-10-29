@@ -92,6 +92,8 @@ class mpClass{
         int cntDown;
         bool dirUp;
         bool dirDown;
+        bool dirUpOld;
+        bool dirDownOld;
         bool osOscillating;
     };
 

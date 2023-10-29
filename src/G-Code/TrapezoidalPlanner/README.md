@@ -12,7 +12,7 @@ There is built in homing using pin or current sensing (If configured in SimpleFO
 
 **GV100** set velocity to 100mm/s
 
-**GA500** set acceleration and deacceleration to 500mm/s/s
+**GA500** set acceleration and deceleration to 500mm/s/s
 
 **GH** begin homing 
 

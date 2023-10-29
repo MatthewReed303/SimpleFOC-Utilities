@@ -27,6 +27,9 @@ void mpClass::linkLowsideCurrentSense(LowsideCurrentSense *currentSenseReference
   currentSense = currentSenseReference;
 }
 
+//Reset Arduino Function
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
+
 //Create instance for function call per object
 mpClass::internal VClass; 
 mpClass::internal AClass; 
@@ -50,14 +53,19 @@ void mpClass::doMotorProtectCommand(char *mpCommand){
     Serial.printf("Bus Voltage Reading: %f \n", readVbus());
   break;
   case 'T':
-    Serial.printf("G431 Temperature: %f \n", readTemp());
+    Serial.printf("Temperature: %f \n", readTemp());
   break;
   }
 }
 
 void mpClass::reset(){
-  //Reset/Restart Driver reinitialize driver and motor calibration
-  //TODO
+
+  //TODO add other boards
+  #if defined(STM32G4xx)
+    NVIC_SystemReset(); //STM32 Reboot
+  #elif defined(__AVR_Atmega32U4__)
+    resetFunc();
+  #endif 
 }
 
 bool mpClass::internal::oscillating(float input, int cnt, float offset, float period){
@@ -79,8 +87,14 @@ bool mpClass::internal::oscillating(float input, int cnt, float offset, float pe
   }
   oldValue = fabs(input);
 
-  if (dirUp)cntUp++;
-  else if (dirDown)cntDown++;
+  if (dirUp && !dirUpOld) { 
+    cntUp++;
+  }
+  else if (dirDown && !dirDownOld) {
+    cntDown++;
+  }
+  dirUpOld = dirUp; 
+  dirDownOld = dirDown; 
 
   if (cntUp >= cnt && cntDown >= cnt){
     if(!osOscillating){
@@ -106,8 +120,10 @@ bool mpClass::internal::oscillating(float input, int cnt, float offset, float pe
 }
 
 float mpClass::readVbus(){
-  float vbus = _readADCVoltageLowSide(A_VBUS, currentSense->params);            
-  vbus = vbus * 10.7711;
+  float vbus = _readADCVoltageLowSide(A_VBUS, currentSense->params);
+  #if defined(STM32G4xx)            
+    vbus = vbus * 10.7711;
+  #endif
   return vbus;
 }
 
@@ -125,7 +141,7 @@ float mpClass::readTemp(){
 
 void mpClass::begin() {
   driver->voltage_power_supply = readVbus();
-  motor->voltage_limit = driver->voltage_power_supply / 2.0f;
+  motor->voltage_limit = driver->voltage_power_supply;
   motor->PID_current_q.limit = motor->voltage_limit;
   motor->PID_current_d.limit = motor->voltage_limit;
   //Update PID Values
