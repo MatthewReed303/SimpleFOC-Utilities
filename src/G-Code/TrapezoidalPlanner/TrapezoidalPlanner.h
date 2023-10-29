@@ -58,14 +58,15 @@ public:
 
     bool calibrationActive;
     bool calibrateMaxDistanceEnabled;
+
+    float Vmax_;    // # Velocity max (rads/s)
+    float Amax_;    // # Acceleration max (rads/s/s)
+    float Dmax_;    // # Decelerations max (rads/s/s)
     
 private:
     BLDCMotor* motor;
     unsigned long plannerTimeStap;
     int plannerPeriod; // 1000 / this number = Hz, i.e. 1000 / 100 = 10Hz, 1000 / 10 = 100Hz, 1000 / 5 = 200Hz, 1000 / 1 = 1000hZ
-    float Vmax_;    // # Velocity max (rads/s)
-    float Amax_;    // # Acceleration max (rads/s/s)
-    float Dmax_;    // # Decelerations max (rads/s/s)
     float Y_;
     float Yd_;
     float Ydd_;

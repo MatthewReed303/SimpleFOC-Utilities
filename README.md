@@ -1,5 +1,9 @@
-Simple FOC Utilities
+## Simple FOC Utilities
 
-CAN Bus
+CAN Bus (currently F4 only)
+
 G-Code/Trajectory Planner
+
 Motor Protections 
+
+See readme in library folders for how to use
