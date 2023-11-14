@@ -502,10 +502,10 @@ void TrapezoidalPlanner::loop(){
                     //If homing has been done, return to home posistion and measure to end of travel 
                     if (homingDone){
                         if(homingDirection){
-                            homingDirection = CW; //Let's change the sensing direction opposite 
+                            homingDirection = CW_Homing; //Let's change the sensing direction opposite 
                         }
                         else {
-                            homingDirection = CCW; //Let's change the sensing direction opposite
+                            homingDirection = CCW_Homing; //Let's change the sensing direction opposite
                         }
                         //Return Home before we start our measurement
                         static bool osReturnHome;  

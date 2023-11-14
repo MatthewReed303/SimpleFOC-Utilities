@@ -39,7 +39,26 @@ mpClass::internal VQClass;
 mpClass::internal VDClass;
 
 void mpClass::doMotorProtectCommand(char *mpCommand){
+  // Parse this string for vals
+  String commandSrt = String(mpCommand);
+  float commandValue;
   switch (mpCommand[0]){
+  case 'P':
+    // Remove V so can convert to a float
+    commandSrt = commandSrt.substring(1);
+    commandValue = commandSrt.toFloat();
+    brakePID.P = commandValue;
+    brakePID.reset();
+    Serial.printf("Brake P Gain: %f \n", brakePID.P);
+  break;
+  case 'I':
+    // Remove V so can convert to a float
+    commandSrt = commandSrt.substring(1);
+    commandValue = commandSrt.toFloat();
+    brakePID.I = commandValue;
+    brakePID.reset();
+    Serial.printf("Brake I Gain: %f \n", brakePID.I);
+  break;
   case 'R':
     reset();
   break;
@@ -141,6 +160,7 @@ float mpClass::readTemp(){
 
 void mpClass::begin() {
   driver->voltage_power_supply = readVbus();
+  SIMPLEFOC_DEBUG("Driver Power Supply Voltage: ", driver->voltage_power_supply);
   motor->voltage_limit = driver->voltage_power_supply;
   motor->PID_current_q.limit = motor->voltage_limit;
   motor->PID_current_d.limit = motor->voltage_limit;
@@ -148,7 +168,7 @@ void mpClass::begin() {
   brakePID.P = brake_P;
   brakePID.I = brake_I;
   brakePID.D = brake_D;
-  brakePID.limit = brake_Max;
+  brakePID.limit = brake_Max_PWM;
 }
 
 void mpClass::loop(){
@@ -165,74 +185,132 @@ void mpClass::loop(){
     previousMicros = micros(); 
 
     static bool osBrake;
+    static bool osBrakeMode;
+    static bool osBrakeModeOff;
     static bool osBrakePWM;
     static bool osBrakeMax;
     static bool osBrakeSafe;
-    if (VBus > (driver->voltage_power_supply + brakeEngageMaxDisableOffset) && (motor->shaft_velocity > 0.01)) {
+    static bool osPwmTimeout;
+    if (VBus > (driver->voltage_power_supply + brakeEngageMaxDisableOffset) && (motor->shaft_velocity > 0.01) && motor->enabled) {
       static long delay = millis();
       if (millis() - delay > brakeCutOffPeriod && !osBrake) {
         brakeMode = brakeEngageMaxDisableMotor;
         SIMPLEFOC_DEBUG("Bus Voltage to high, Disable Motor: ", VBus);
         osBrake = true;
+        osBrakeModeOff = false;
         osBrakeSafe = false;
+        osPwmTimeout = false;
         delay = millis(); 
       }
     }
-    else if (VBus > (driver->voltage_power_supply + brakeEngageMaxOffset) && (motor->shaft_velocity > 0.01)) {
-      if(!osBrakeMax){
+    else if (VBus > (driver->voltage_power_supply + brakeEngageMaxOffset) && (motor->shaft_velocity > 0.01) && motor->enabled) {
+      //if(!osBrakeMax){
+      //  brakeMode = brakeEngageMax;
+      //  SIMPLEFOC_DEBUG("Bus Voltage High, Max PWM: ", VBus);
+      //  osBrakeMax = true;
+      //  osBrakeModeOff = false;
+      //  osBrakeSafe = false;
+      //  osPwmTimeout = false;
+      //}
+      static long delay = micros();
+      if (micros() - delay > brakeVbusDelay && !osBrakeMax) {
         brakeMode = brakeEngageMax;
         SIMPLEFOC_DEBUG("Bus Voltage High, Max PWM: ", VBus);
         osBrakeMax = true;
+        osBrakeModeOff = false;
         osBrakeSafe = false;
+        osPwmTimeout = false;
+        delay = micros(); 
       }
     }
-    else if (VBus > (driver->voltage_power_supply + brakeEngageOffset) && (motor->shaft_velocity > 0.01)) {
+    else if (VBus > (driver->voltage_power_supply + brakeEngageOffset) && (motor->shaft_velocity > 0.01) && motor->enabled) {
       if(!osBrakePWM){
         brakeMode = brakeEngage;
-        SIMPLEFOC_DEBUG("Bus Voltage High, PID PWM: ", VBus);
+        //SIMPLEFOC_DEBUG("Bus Voltage High, PID PWM: ", VBus);
         osBrakePWM = true;
+        osBrakeModeOff = false;
         osBrakeSafe = false;
+        osPwmTimeout = false;
       }
     }
-    else if (VBus <= (driver->voltage_power_supply + 0.1)) {
-      if(!osBrakeSafe) {
+
+    if (VBus <= (driver->voltage_power_supply + 0.25) && (motor->shaft_velocity < 0.01)) {
+      static long delay = millis();
+      if (millis() - delay > brakeSafePeriod) {
         brakeMode = brakeOff;
-        SIMPLEFOC_DEBUG("Bus Voltage Safe, Switch off Brake: ", VBus);
+        osBrakeMode = false;
         osBrake = false;
         osBrakePWM = false;
         osBrakeMax = false;
-        osBrakeSafe = true;
+        delay = millis(); 
+      }
+    }
+    else if (pwmDuty > 0) {
+      static long delay = millis();
+      if (millis() - delay > pwmTimeout) {
+        brakeMode = pwmTimeoutBrakeOff;
+        osBrake = false;
+        osBrakePWM = false;
+        osBrakeMax = false;
+        delay = millis(); 
       }
     }
     switch(brakeMode)
     {
       case brakeOff:
         pwmDuty = 0;
+        if(!osBrakeModeOff){
+          SIMPLEFOC_DEBUG("Bus Voltage Safe, Switch off Brake: ", VBus);
+          osBrakeModeOff = true;
+        }
       break;
 
       case brakeEngage:
         pwmDuty = fabs(pwmPID);
-        //pwmDuty = 0;
-        SIMPLEFOC_DEBUG("Brake PWM Duty Cycle: ", pwmDuty);
+        if(!osBrakeMode){
+          //SIMPLEFOC_DEBUG("Brake PWM Duty Cycle: ", pwmDuty);
+          osBrakeMode = true;
+        }
       break;
 
       case brakeEngageMax:
-        pwmDuty = 250;
-        SIMPLEFOC_DEBUG("Brake MAX PWM Duty Cycle: ", pwmDuty);
+        pwmDuty = brake_Max_PWM;
+        if(!osBrakeMode){
+          SIMPLEFOC_DEBUG("Brake MAX PWM Duty Cycle: ", pwmDuty);
+          osBrakeMode = true;
+        }
       break;
 
       case brakeEngageMaxDisableMotor:
-        pwmDuty = 250;
+        pwmDuty = brake_Max_PWM;
         motor->disable();
+        if(!osBrakeMode){
+          SIMPLEFOC_DEBUG("Brake MAX Over Voltage Disable Motor: ", pwmDuty);
+          osBrakeMode = true;
+        }   
+      break;
+
+      case pwmTimeoutBrakeOff:
+        pwmDuty = 0;
+        //motor->disable();
+        if(!osBrakeMode){
+          SIMPLEFOC_DEBUG("Brake PWM Timeout, shutdown before burning out braking resistor: ", pwmDuty);
+          osBrakeMode = true;
+        }
       break;
     }
 
-    analogWrite(A_PWM, pwmDuty);
-    //TODO get the _writeDutyCycle1PWM working
-    //Should not be using analogWrite
-    //void* pwm1params;
-    //pwm1params = _configure1PWM(1000, A_PWM);
-    //_writeDutyCycle1PWM(0.5, pwm1params);
+    //Block PWM to Brake if Motor Disabled
+    if (motor->enabled) {
+      analogWriteFrequency(2000);
+      analogWriteResolution(12);
+      analogWrite(PA15_ALT1, pwmDuty);
+      //TODO get the _writeDutyCycle1PWM working
+      //Should not be using analogWrite
+      //void* pwm1params;
+      //pwm1params = _configure1PWM(1000, A_PWM);
+      //_writeDutyCycle1PWM(0.5, pwm1params);
+    }
 
     //VBus Under Voltage
     static bool osUnderVoltage;

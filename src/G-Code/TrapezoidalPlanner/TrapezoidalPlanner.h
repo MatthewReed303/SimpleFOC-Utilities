@@ -17,8 +17,8 @@ public:
     float mm2rads(float mm, float mmPerRev);
     float rads2mm(float rads, float mmPerRev);
 
-    #define CW false
-    #define CCW true
+    #define CW_Homing false
+    #define CCW_Homing true
     #define limitSW false
     #define currentSW true
 
@@ -44,7 +44,7 @@ public:
     bool homingDoneToMove = true; //This flag disables G code movement until homing is done
     bool homingPinState =false; 
     bool homingMode = limitSW;  
-    bool homingDirection = CW;
+    bool homingDirection = CW_Homing;
     float homingVel = 2; //Rads
     float homingTimeout = 5000; //Millis
     float homingCurrent = 1; //Motor Amps current.Q

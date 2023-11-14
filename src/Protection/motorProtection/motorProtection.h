@@ -25,17 +25,20 @@ class mpClass{
     float brake_P = 1;
     float brake_I = 10;
     float brake_D = 0;
-    float brake_Min = 0;
-    float brake_Max = 250;
+    float brake_Min_PWM = 0;
+    float brake_Max_PWM = 220;
     float brake_Cycle = 0;
     unsigned long update = 500;
 
-    PIDController brakePID{brake_P,brake_I,brake_D,10000, brake_Max};
+    PIDController brakePID{brake_P,brake_I,brake_D,1000, brake_Max_PWM};
 
     float brakeEngageOffset = 0.25;
     float brakeEngageMaxOffset = 2.0;
     float brakeEngageMaxDisableOffset = 3.0;
     float brakeCutOffPeriod = 250;
+    float brakeSafePeriod = 1000;
+    float pwmTimeout = 2000;
+    float brakeVbusDelay = 5000;
 
     float underVDelayPeriod = 10;
     float underVoffset = 2.5;
@@ -114,7 +117,8 @@ class mpClass{
     #define brakeOff 1
     #define brakeEngage 2
     #define brakeEngageMax 3
-    #define brakeEngageMaxDisableMotor 4 
+    #define brakeEngageMaxDisableMotor 4
+    #define pwmTimeoutBrakeOff 5
 
     BLDCMotor* motor;
     Encoder* encoder;
